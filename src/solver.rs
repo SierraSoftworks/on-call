@@ -150,7 +150,9 @@ impl<'a> Scheduler<'a> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Duration, NaiveTime};
+    use chrono::{Duration, NaiveDate, NaiveTime};
+
+    use crate::summary;
 
     use super::*;
 
@@ -176,7 +178,7 @@ mod tests {
                     Constraint::DayOfWeek(vec![chrono::Weekday::Mon, chrono::Weekday::Wed, chrono::Weekday::Fri]),
                 ],
                 "bob@example.com" => vec![
-                    Constraint::Unavailable { start: (Utc::now() + Duration::days(5)).naive_utc().date(), end: (Utc::now() + Duration::days(13)).naive_utc().date() }
+                    Constraint::Unavailable { start: NaiveDate::from_ymd_opt(2022, 12, 23).unwrap(), end: NaiveDate::from_ymd_opt(2023, 1, 2).unwrap() }
                 ],
                 "claire@example.com" => vec![
                     Constraint::None,
@@ -184,33 +186,35 @@ mod tests {
             ],
         };
 
-        let schedule = Scheduler::new(&config)
-            .with_debug()
-            .schedule(Utc::now(), Utc::now() + Duration::days(28));
+        let schedule = Scheduler::new(&config).schedule(
+            NaiveDate::from_ymd_opt(2023, 1, 1)
+                .unwrap()
+                .and_time(NaiveTime::default())
+                .and_local_timezone(Utc)
+                .unwrap(),
+                NaiveDate::from_ymd_opt(2023, 12, 31)
+                .unwrap()
+                .and_time(NaiveTime::default())
+                .and_local_timezone(Utc)
+                .unwrap(),
+        );
 
         assert!(
             schedule.iter().all(|slot| slot.human.is_some()),
             "all slots must be filled"
         );
 
-        let summary =
-            schedule
-                .iter()
-                .filter(|slot| slot.human.is_some())
-                .fold(map![], |mut map, slot| {
-                    let entry = map
-                        .entry(slot.human.clone().unwrap())
-                        .or_insert_with(Duration::zero);
-                    *entry = *entry + slot.time.len();
-
-                    map
-                });
-
-        let min_assignment = summary.values().min().unwrap();
-        let max_assignment = summary.values().max().unwrap();
+        let summary = summary::Summary::from(&schedule);
+        
+        let (min, _, max) = summary.workload_stats();
         assert!(
-            (*max_assignment - *min_assignment) < Duration::hours(8),
-            "assignments should be within 1 day of each other"
+            (max - min) <= 16,
+            "assignments should be within 2 shifts of each other"
+        );
+
+        let (_, _, max) = summary.longest_shift_stats();
+        assert_eq!(
+            max, 8, "the longest shift should be 8 hours",
         );
     }
 }

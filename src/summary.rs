@@ -60,6 +60,7 @@ impl<T: AsRef<[ScheduleSlot]>> From<T> for Summary {
     }
 }
 
+#[allow(unused)]
 impl Summary {
     fn stats<I: IntoIterator<Item = Duration>>(items: I) -> (i64, i64, i64) {
         let mut items: Vec<_> = items.into_iter().collect();
@@ -69,7 +70,15 @@ impl Summary {
         let max = items.last().copied().unwrap_or_else(Duration::zero);
         let avg = items.iter().sum::<Duration>() / items.len() as i32;
 
-        (min.num_hours(), max.num_hours(), avg.num_hours())
+        (min.num_hours(), avg.num_hours(), max.num_hours())
+    }
+
+    pub fn workload_stats(&self) -> (i64, i64, i64) {
+        Self::stats(self.workload.values().copied())
+    }
+
+    pub fn longest_shift_stats(&self) -> (i64, i64, i64) {
+        Self::stats(self.longest_shift.values().copied())
     }
 }
 
@@ -77,11 +86,11 @@ impl Display for Summary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut workload: Vec<_> = self.workload.iter().collect();
         workload.sort_by_key(|(_, v)| -v.num_hours());
-        let (wl_min, wl_max, wl_avg) = Self::stats(self.workload.values().copied());
+        let (wl_min, wl_avg, wl_max) = Self::stats(self.workload.values().copied());
 
         let mut longest_shift: Vec<_> = self.longest_shift.iter().collect();
         longest_shift.sort_by_key(|(_, v)| -v.num_hours());
-        let (ls_min, ls_max, ls_avg) = Self::stats(self.longest_shift.values().copied());
+        let (ls_min, ls_avg, ls_max) = Self::stats(self.longest_shift.values().copied());
 
         writeln!(f, "Workload: (min: {wl_min}, avg: {wl_avg}, max: {wl_max})")?;
         for (human, workload) in workload {
