@@ -179,7 +179,7 @@ mod tests {
     fn config_deserialize()
     {
         let config = r#"
-        shiftLength: P1D
+        shiftLength: 1
         constraints:
             - !DayOfWeek [Mon, Tue, Wed, Thu, Fri]
             - !TimeRange
@@ -196,5 +196,7 @@ mod tests {
 
         let config: Config = serde_yaml::from_str(config).expect("the config should be deserializable");
         assert_eq!(config.shift_length, Duration::days(1));
+        assert_eq!(config.constraints.len(), 2);
+        assert_eq!(config.humans.len(), 2);
     }
 }
