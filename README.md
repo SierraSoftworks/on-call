@@ -105,58 +105,52 @@ $ on-call --config .\examples\3-day.yaml --start 2023-01-01 --end 2023-12-30
 
 ```
 Humans:
-  frank@example.com:
-    - unavailable from 2023-02-09 to 2023-02-17
-  donovan@example.com:
-  alice@example.com:
-    - available on Mon, Wed, Fri,
   claire@example.com:
     - always available
+  frank@example.com:
+    - unavailable from 2023-02-09 to 2023-02-17
   bob@example.com:
     - unavailable from 2023-01-01 to 2023-01-07
+  alice@example.com:
+    - available on Mon, Wed, Fri,
+  donovan@example.com:
   erica@example.com:
 
-Workload: (min: 336, avg: 345, max: 360)
-  frank@example.com: 360 hours
-  donovan@example.com: 360 hours
-  claire@example.com: 344 hours
-  bob@example.com: 336 hours
-  erica@example.com: 336 hours
+Workload: (min: 336, avg: 346, max: 352)
+  claire@example.com: 352 hours
+  bob@example.com: 352 hours
+  donovan@example.com: 352 hours
+  frank@example.com: 344 hours
+  erica@example.com: 344 hours
   alice@example.com: 336 hours
 
-Longest shift: (min: 8, avg: 21, max: 24)
+Longest shift: (min: 16, avg: 22, max: 24)
   frank@example.com: 24 hours
-  donovan@example.com: 24 hours
+  erica@example.com: 24 hours
   bob@example.com: 24 hours
   claire@example.com: 24 hours
-  erica@example.com: 24 hours
-  alice@example.com: 8 hours
+  donovan@example.com: 24 hours
+  alice@example.com: 16 hours
 
 Shift length histogram:
- 59 | 8 hours
- 43 | 24 hours
- 34 | 16 hours
+ 64 | 24 hours
+ 46 | 8 hours
+ 10 | 16 hours
 
 
 Schedule:
-  2023-01-06 08:00:00 - 2023-01-06 16:00:00: alice@example.com
-  2023-01-09 08:00:00 - 2023-01-09 16:00:00: bob@example.com
-  2023-01-10 08:00:00 - 2023-01-10 16:00:00: claire@example.com
+  2023-01-02 08:00:00 - 2023-01-02 16:00:00: claire@example.com
+  2023-01-03 08:00:00 - 2023-01-03 16:00:00: claire@example.com
+  2023-01-04 08:00:00 - 2023-01-04 16:00:00: claire@example.com
+  2023-01-05 08:00:00 - 2023-01-05 16:00:00: donovan@example.com
+  2023-01-06 08:00:00 - 2023-01-06 16:00:00: donovan@example.com
+  2023-01-09 08:00:00 - 2023-01-09 16:00:00: donovan@example.com
+  2023-01-10 08:00:00 - 2023-01-10 16:00:00: bob@example.com
   2023-01-11 08:00:00 - 2023-01-11 16:00:00: bob@example.com
-  2023-01-12 08:00:00 - 2023-01-12 16:00:00: claire@example.com
-  2023-01-13 08:00:00 - 2023-01-13 16:00:00: alice@example.com
-  2023-01-16 08:00:00 - 2023-01-16 16:00:00: bob@example.com
-  2023-01-17 08:00:00 - 2023-01-17 16:00:00: claire@example.com
-  2023-01-18 08:00:00 - 2023-01-18 16:00:00: alice@example.com
-  2023-01-19 08:00:00 - 2023-01-19 16:00:00: bob@example.com
-  2023-01-20 08:00:00 - 2023-01-20 16:00:00: alice@example.com
-  2023-01-23 08:00:00 - 2023-01-23 16:00:00: claire@example.com
-  2023-01-24 08:00:00 - 2023-01-24 16:00:00: bob@example.com
-  2023-01-25 08:00:00 - 2023-01-25 16:00:00: alice@example.com
-  2023-01-26 08:00:00 - 2023-01-26 16:00:00: claire@example.com
-  2023-01-27 08:00:00 - 2023-01-27 16:00:00: bob@example.com
-  2023-01-30 08:00:00 - 2023-01-30 16:00:00: alice@example.com
-  2023-01-31 08:00:00 - 2023-01-31 16:00:00: claire@example.com
-  2023-02-01 08:00:00 - 2023-02-01 16:00:00: bob@example.com
-  2023-02-02 08:00:00 - 2023-02-02 16:00:00: claire@example.com
+  2023-01-12 08:00:00 - 2023-01-12 16:00:00: bob@example.com
+  2023-01-13 08:00:00 - 2023-01-13 16:00:00: erica@example.com
+  2023-01-16 08:00:00 - 2023-01-16 16:00:00: erica@example.com
+  2023-01-17 08:00:00 - 2023-01-17 16:00:00: erica@example.com
+  2023-01-18 08:00:00 - 2023-01-18 16:00:00: frank@example.com
+  2023-01-19 08:00:00 - 2023-01-19 16:00:00: frank@example.com
 ```
