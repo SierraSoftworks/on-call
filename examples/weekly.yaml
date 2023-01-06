@@ -1,0 +1,14 @@
+shiftLength: 7
+constraints:
+  - !TimeRange
+    start: 08:00:00
+    end: 16:00:00
+humans:
+  alice@example.com:
+    - !DayOfWeek [Mon, Wed, Fri]
+  bob@example.com:
+    - !Unavailable
+      start: 2023-01-01
+      end: 2023-01-07
+  claire@example.com:
+    - !None

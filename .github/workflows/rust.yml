@@ -1,0 +1,71 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1.0.7
+      with:
+        toolchain: stable
+        profile: minimal
+        components: llvm-tools-preview
+        override: true
+        
+    - uses: Swatinem/rust-cache@v2
+
+    # - name: install protoc
+    #   run: |
+    #     $protoc_url = "https://github.com/protocolbuffers/protobuf/releases/download/v3.20.2/protoc-3.20.2-linux-x86_64.zip"
+    #     Write-Host "Downloading protoc from '$protoc_url'"
+    #     Invoke-WebRequest -OutFile protoc.zip -Uri $protoc_url
+    #     Expand-Archive protoc.zip -DestinationPath ../tools
+    #     Add-Content -Path $env:GITHUB_PATH -Value "$((Get-Item ./).Parent.FullName)/tools/bin"
+    #   shell: pwsh
+        
+    - name: Run tests
+      uses: actions-rs/cargo@v1.0.3
+      with:
+        command: test
+        args: --all-features --no-fail-fast
+      env:
+        RUSTFLAGS: "-C instrument_coverage"
+        LLVM_PROFILE_FILE: default.profraw
+      
+    - name: install rustfilt
+      uses: actions-rs/cargo@v1.0.3
+      with:
+        command: install
+        args: rustfilt
+        
+    - name: prepare coverage output
+      shell: pwsh
+      run: |
+        Write-Host "Merging raw profile output files"
+        &"$(rustc --print target-libdir)/../bin/llvm-profdata" merge -sparse default.profraw -o default.profdata
+        $latest_asset = Get-ChildItem -Path ./target/debug/deps -Filter "on-call-*" -File `
+        | Where-Object { $_.Name.EndsWith(".exe") -or (-not $_.Name.Contains(".")) } `
+        | Sort-Object -Top 1 -Property LastWriteTime
+        Write-Host "Latest Asset: $latest_asset"
+        Write-Host "Exporting LCOV coverage report"
+        &"$(rustc --print target-libdir)/../bin/llvm-cov" export -instr-profile default.profdata $latest_asset `
+            -Xdemangler=rustfilt `
+            -ignore-filename-regex='.cargo|rustc' `
+            -compilation-dir=src `
+            -format=lcov > lcov.info
+    
+    - name: Upload code coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./lcov.info
