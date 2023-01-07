@@ -1,6 +1,5 @@
 use crate::{
-    config::Config,
-    constraints::Constraint,
+    config::{Config, Human},
     factors::{self, Candidate, Optimizer},
     timerange::TimeRange,
 };
@@ -73,8 +72,8 @@ impl<'a> Scheduler<'a> {
             .config
             .humans
             .iter()
-            .map(|(human, constraints)| {
-                let available_slots = self.possible_coverage(constraints, slots_to_fill);
+            .map(|(human, info)| {
+                let available_slots = self.possible_coverage(info, slots_to_fill);
 
                 let mut candidate = Candidate::new(human, available_slots);
                 for factor in self.factors.iter() {
@@ -126,10 +125,10 @@ impl<'a> Scheduler<'a> {
     }
 
     /// Returns a vector of booleans indicating whether each slot can be covered by the given constraints.
-    fn possible_coverage(&self, constraints: &[Constraint], slots: &[TimeRange]) -> Vec<bool> {
+    fn possible_coverage(&self, human: &Human, slots: &[TimeRange]) -> Vec<bool> {
         let initial_slots: Box<dyn Iterator<Item = TimeRange>> = Box::new(slots.iter().copied());
 
-        let available_slots = constraints.iter().fold(initial_slots, |ranges, constraint| {
+        let available_slots = human.constraints.iter().fold(initial_slots, |ranges, constraint| {
             constraint.flat_map(ranges)
         }).collect::<Vec<_>>();
 
@@ -144,7 +143,7 @@ impl<'a> Scheduler<'a> {
 mod tests {
     use chrono::{Duration, NaiveDate, NaiveTime};
 
-    use crate::summary;
+    use crate::{summary, config::Human, constraints::Constraint};
 
     use super::*;
 
@@ -166,15 +165,13 @@ mod tests {
                 },
             ],
             humans: map![
-                "alice@example.com" => vec![
+                "alice@example.com" => Human::default().with_constraints(vec![
                     Constraint::DayOfWeek(vec![chrono::Weekday::Mon, chrono::Weekday::Wed, chrono::Weekday::Fri]),
-                ],
-                "bob@example.com" => vec![
+                ]),
+                "bob@example.com" => Human::default().with_constraints(vec![
                     Constraint::Unavailable { start: NaiveDate::from_ymd_opt(2022, 12, 23).unwrap(), end: NaiveDate::from_ymd_opt(2023, 1, 2).unwrap() }
-                ],
-                "claire@example.com" => vec![
-                    Constraint::None,
-                ]
+                ]),
+                "claire@example.com" => Human::default()
             ],
         };
 

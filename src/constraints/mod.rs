@@ -43,12 +43,7 @@ impl Display for Constraint {
         match self {
             Constraint::None => write!(f, "always available"),
             Constraint::DayOfWeek(days) => {
-                let mut days_str = String::new();
-                for day in days {
-                    days_str.push_str(&format!("{:?}, ", day));
-                }
-
-                write!(f, "available on {}", days_str)
+                write!(f, "available on {:?}", days)
             }
             Constraint::TimeRange { start, end } => {
                 write!(f, "available between {} and {}", start, end)

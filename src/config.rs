@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use chrono::Duration;
 use serde::{Serialize, Deserialize};
@@ -11,7 +11,60 @@ pub struct Config {
     pub shift_length: Duration,
     #[serde(default)]
     pub constraints: Vec<Constraint>,
-    pub humans: HashMap<String, Vec<Constraint>>,
+    pub humans: HashMap<String, Human>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Human {
+    #[serde(default)]
+    pub constraints: Vec<Constraint>,
+    #[serde(rename = "priorWorkload", with="duration_hours", default="Duration::zero")]
+    pub prior_workload: Duration,
+}
+
+#[cfg(test)]
+#[allow(dead_code)]
+impl Human {
+    pub fn with_constraints(self, constraints: Vec<Constraint>) -> Self {
+        Self {
+            constraints,
+            ..self
+        }
+    }
+
+    pub fn with_prior_workload(self, prior_workload: Duration) -> Self {
+        Self {
+            prior_workload,
+            ..self
+        }
+    }
+}
+
+impl Default for Human {
+    fn default() -> Self {
+        Self {
+            constraints: Vec::new(),
+            prior_workload: Duration::zero(),
+        }
+    }
+}
+
+impl Display for Human {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut info = vec![];
+
+        if !self.prior_workload.is_zero() {
+            info.push(format!("prior workload: {} hours", self.prior_workload.num_hours()));
+        }
+
+        for constraint in self.constraints.iter() {
+            info.push(format!("{}", constraint));
+        }
+
+        write!(f, "{}", info.join(", "))?;
+
+        Ok(())
+    }
 }
 
 mod duration_days {
@@ -20,7 +73,7 @@ mod duration_days {
 
     pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
     where S: serde::Serializer {
-        let days = duration.num_seconds() / 86400;
+        let days = duration.num_days();
         serializer.serialize_u64(days as u64)
     }
 
@@ -28,6 +81,23 @@ mod duration_days {
     where D: serde::Deserializer<'de> {
         let days = u64::deserialize(deserializer)?;
         Ok(Duration::days(days as i64))
+    }
+}
+
+mod duration_hours {
+    use chrono::Duration;
+    use serde::Deserialize;
+
+    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where S: serde::Serializer {
+        let hours = duration.num_hours();
+        serializer.serialize_u64(hours as u64)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where D: serde::Deserializer<'de> {
+        let hours = u64::deserialize(deserializer)?;
+        Ok(Duration::hours(hours as i64))
     }
 }
 

@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use chrono::Duration;
 
-use crate::solver::ScheduleSlot;
+use crate::{solver::ScheduleSlot, config::Config};
 
 pub struct Summary {
     workload: HashMap<String, Duration>,
@@ -73,6 +73,23 @@ impl Summary {
         (min.num_hours(), avg.num_hours(), max.num_hours())
     }
 
+    pub fn with_adjustments(self, config: &Config) -> Self {
+        let mut workload = self.workload;
+
+        for (name, info) in config.humans.iter() {
+            if let Some(duration) = workload.get_mut(name) {
+                *duration = *duration + info.prior_workload;
+            } else {
+                workload.insert(name.clone(), info.prior_workload);
+            }
+        }
+
+        Self {
+            workload,
+            ..self
+        }
+    }
+
     pub fn workload_stats(&self) -> (i64, i64, i64) {
         Self::stats(self.workload.values().copied())
     }
@@ -94,7 +111,7 @@ impl Display for Summary {
 
         writeln!(f, "Workload: (min: {wl_min}, avg: {wl_avg}, max: {wl_max})")?;
         for (human, workload) in workload {
-            writeln!(f, "  {}: {} hours", human, workload.num_hours())?;
+            writeln!(f, "  {}: {} hours (future adjustment: {})", human, workload.num_hours(), workload.num_hours() - wl_min)?;
         }
 
         writeln!(f)?;

@@ -15,7 +15,7 @@ impl Optimizer for Workload {
         Self: Sized {
         let mut workload = HashMap::new();
         for human in config.humans.iter() {
-            workload.insert(human.0.clone(), Duration::zero());
+            workload.insert(human.0.clone(), human.1.prior_workload);
         }
 
         Box::new(Self { workload })

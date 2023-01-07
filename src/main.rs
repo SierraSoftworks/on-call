@@ -40,11 +40,8 @@ fn main() {
     };
 
     eprintln!("Humans:");
-    for (human, constraints) in config.humans.iter() {
-        eprintln!("  {}:", human);
-        for constraint in constraints.iter() {
-            eprintln!("    - {}", constraint);
-        }
+    for (name, info) in config.humans.iter() {
+        eprintln!("  {}: {}", name, info);
     }
 
     let start = args.start.unwrap_or_else(|| Utc::now().naive_utc().date());
@@ -67,7 +64,7 @@ fn main() {
             .unwrap(),
     );
 
-    let summary: summary::Summary = (&schedule).into();
+    let summary = summary::Summary::from(&schedule).with_adjustments(&config);
 
     eprintln!();
     eprintln!("{}", summary);

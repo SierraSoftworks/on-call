@@ -89,13 +89,15 @@ constraints:
     end: 16:00:00
 humans:
   alice@example.com:
-    - !DayOfWeek [Mon, Wed, Fri] # Alice is only available on Mondays, Wednesdays and Fridays
+    constraints:
+      - !DayOfWeek [Mon, Wed, Fri] # Alice is only available on Mondays, Wednesdays and Fridays
   bob@example.com:
-    - !Unavailable # Bob is taking vacation between these dates
-      start: 2023-01-01
-      end: 2023-01-07
-  claire@example.com: # Claire has no availability restrictions
-    - !None
+    constraints:
+      - !Unavailable # Bob is taking vacation between these dates
+        start: 2023-01-01
+        end: 2023-01-07
+  claire@example.com: # Claire has no availability restrictions, but had previously covered extra shifts totalling 36 hours
+    priorWorkload: 36
 ```
 
 ```bash
