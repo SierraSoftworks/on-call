@@ -43,15 +43,11 @@ impl<'a> Scheduler<'a> {
 
         // TODO: In future, accept a weights input to allow iterative scheduling while remaining fair
 
-        let mut slots_to_fill = vec![TimeRange::new(start.naive_utc(), end.naive_utc())];
-        for constraint in &self.config.constraints {
-            let mut new_ranges = vec![];
-            for range in slots_to_fill {
-                let suitable_ranges = constraint.suitable_ranges(range);
-                new_ranges.extend(suitable_ranges);
-            }
-            slots_to_fill = new_ranges;
-        }
+        let initial_range: Box<dyn Iterator<Item = TimeRange>> = Box::new(vec![TimeRange::new(start.naive_utc(), end.naive_utc())].into_iter());
+
+        let slots_to_fill = self.config.constraints.iter().fold(initial_range, |ranges, constraint| {
+            constraint.flat_map(ranges)
+        }).collect::<Vec<_>>();
 
         for slot in slots_to_fill.chunks(self.config.shift_length.abs().num_days() as usize) {
             let mut rotation_assignments = self.schedule_rotation(slot);
@@ -131,19 +127,15 @@ impl<'a> Scheduler<'a> {
 
     /// Returns a vector of booleans indicating whether each slot can be covered by the given constraints.
     fn possible_coverage(&self, constraints: &[Constraint], slots: &[TimeRange]) -> Vec<bool> {
-        let mut slots_to_fill = slots.to_vec();
-        for constraint in constraints {
-            let mut new_ranges = vec![];
-            for range in slots_to_fill {
-                let suitable_ranges = constraint.suitable_ranges(range);
-                new_ranges.extend(suitable_ranges);
-            }
-            slots_to_fill = new_ranges;
-        }
+        let initial_slots: Box<dyn Iterator<Item = TimeRange>> = Box::new(slots.iter().copied());
+
+        let available_slots = constraints.iter().fold(initial_slots, |ranges, constraint| {
+            constraint.flat_map(ranges)
+        }).collect::<Vec<_>>();
 
         slots
             .iter()
-            .map(|slot| slots_to_fill.binary_search(slot).is_ok())
+            .map(|slot| available_slots.binary_search(slot).is_ok())
             .collect()
     }
 }
