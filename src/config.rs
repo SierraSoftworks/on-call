@@ -257,11 +257,14 @@ mod tests {
               end: 16:00:00
         humans:
             alice@example.com:
-                - !None
+                constraints:
+                    - !None
+                priorWorkload: 72
             bob@example.com:
-                - !Unavailable
-                  start: 2019-01-01
-                  end: 2019-01-04
+                constraints:
+                    - !Unavailable
+                      start: 2019-01-01
+                      end: 2019-01-04
         "#;
 
         let config: Config = serde_yaml::from_str(config).expect("the config should be deserializable");
