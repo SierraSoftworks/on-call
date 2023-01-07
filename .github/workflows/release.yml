@@ -115,7 +115,7 @@ jobs:
 
       - name: Strip Debug Symbols
         run: |
-          ${{ matrix.strip }} target/${{ matrix.target }}/release/on_call${{ matrix.extension }}
+          ${{ matrix.strip }} target/${{ matrix.target }}/release/on-call${{ matrix.extension }}
         if: matrix.strip
 
       - name: Upload GitHub Release Artifacts
