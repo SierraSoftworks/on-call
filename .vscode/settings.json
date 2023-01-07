@@ -1,0 +1,8 @@
+{
+    "yaml.customTags": [
+        "!DayOfWeek sequence",
+        "!TimeOfDay mapping",
+        "!Unavailable mapping",
+        "!None",
+    ]
+}

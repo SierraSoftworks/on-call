@@ -159,7 +159,7 @@ mod tests {
                     chrono::Weekday::Thu,
                     chrono::Weekday::Fri,
                 ]),
-                Constraint::TimeRange {
+                Constraint::TimeOfDay {
                     start: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
                     end: NaiveTime::from_hms_opt(17, 0, 0).unwrap(),
                 },

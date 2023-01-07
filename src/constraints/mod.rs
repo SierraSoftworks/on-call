@@ -14,7 +14,7 @@ mod unavailable;
 pub enum Constraint {
     None,
     DayOfWeek(Vec<Weekday>),
-    TimeRange { start: NaiveTime, end: NaiveTime },
+    TimeOfDay { start: NaiveTime, end: NaiveTime },
     Unavailable { start: NaiveDate, end: NaiveDate },
 }
 
@@ -28,7 +28,7 @@ impl Constraint {
             Constraint::DayOfWeek(days) => {
                 Box::new(dayofweek::DayOfWeekIterator::new(ranges, days.clone()))
             }
-            Constraint::TimeRange { start, end } => {
+            Constraint::TimeOfDay { start, end } => {
                 Box::new(timeofday::TimeOfDayIterator::new(ranges, *start, *end))
             }
             Constraint::Unavailable { start, end } => {
@@ -45,7 +45,7 @@ impl Display for Constraint {
             Constraint::DayOfWeek(days) => {
                 write!(f, "available on {:?}", days)
             }
-            Constraint::TimeRange { start, end } => {
+            Constraint::TimeOfDay { start, end } => {
                 write!(f, "available between {} and {}", start, end)
             }
             Constraint::Unavailable { start, end } => {
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_time_of_day_constraint() {
-        let constraint = Constraint::TimeRange {
+        let constraint = Constraint::TimeOfDay {
             start: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
             end: NaiveTime::from_hms_opt(17, 0, 0).unwrap(),
         };

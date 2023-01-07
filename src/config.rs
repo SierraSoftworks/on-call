@@ -252,7 +252,7 @@ mod tests {
         shiftLength: 1
         constraints:
             - !DayOfWeek [Mon, Tue, Wed, Thu, Fri]
-            - !TimeRange
+            - !TimeOfDay
               start: 08:00:00
               end: 16:00:00
         humans:

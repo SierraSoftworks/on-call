@@ -84,7 +84,7 @@ will cover on-call (if you have part time employees, or people whose situations 
 shiftLength: 1 # A new shift starts every day
 constraints:
   - !DayOfWeek [Mon, Tue, Wed, Thu, Fri] # Shifts cover weekdays only
-  - !TimeRange # And run from 08:00 to 16:00 on those days
+  - !TimeOfDay # And run from 08:00 to 16:00 on those days
     start: 08:00:00
     end: 16:00:00
 humans:
