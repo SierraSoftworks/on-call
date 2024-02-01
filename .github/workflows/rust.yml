@@ -66,6 +66,6 @@ jobs:
             -format=lcov > lcov.info
     
     - name: Upload code coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./lcov.info
