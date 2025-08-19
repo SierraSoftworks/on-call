@@ -119,7 +119,7 @@ jobs:
         if: matrix.strip
 
       - name: Upload GitHub Release Artifacts
-        uses: SierraSoftworks/gh-releases@v1.0.7
+        uses: SierraSoftworks/gh-releases@v1.0.8
         with:
           files: "target/${{ matrix.target }}/release/on-call${{ matrix.extension }} | on-call-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.extension }}"
           token: ${{ secrets.GITHUB_TOKEN }}
