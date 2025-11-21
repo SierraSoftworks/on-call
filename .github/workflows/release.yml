@@ -9,7 +9,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Generate Package Version
         id: version
@@ -100,7 +100,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Fetch Versioned Cargo.toml
         uses: actions/download-artifact@v6
