@@ -1,0 +1,9 @@
+# Cross-compilation linker configuration.
+#
+# When building for aarch64 on an x86_64 host, cargo would otherwise invoke the
+# host's gcc/linker, which forces x86_64 ELF emulation onto the aarch64 objects
+# and fails with "incompatible with elf64-x86-64". Point the target at the
+# aarch64 cross-compiler (provided by the gcc-aarch64-linux-gnu package the
+# release workflow installs) so the correct linker and emulation are used.
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
