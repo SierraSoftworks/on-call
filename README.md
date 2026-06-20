@@ -5,6 +5,13 @@ This tool is designed to help teams with a reasonably complex on-call schedule q
 generate a reasonable, fair, schedule without the manual legwork of needing to manually handle exceptions
 for holidays, sick-days etc.
 
+## Installation
+Install with [Homebrew](https://brew.sh):
+
+```sh
+brew install sierrasoftworks/tap/on-call
+```
+
 ## Features
  - **Supports Variable On-Call Schedules** which can have arbitrary cycle lengths and constraints like which days of
    the week they cover, and which hours of the day they run for.
