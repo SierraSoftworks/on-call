@@ -43,7 +43,8 @@ impl Display for Constraint {
         match self {
             Constraint::None => write!(f, "always available"),
             Constraint::DayOfWeek(days) => {
-                write!(f, "available on {:?}", days)
+                let days: Vec<String> = days.iter().map(|day| day.to_string()).collect();
+                write!(f, "available on {}", days.join(", "))
             }
             Constraint::TimeOfDay { start, end } => {
                 write!(f, "available between {} and {}", start, end)

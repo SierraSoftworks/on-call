@@ -16,7 +16,7 @@ humans:
   claire@example.com: {}
   donovan@example.com: {}
   erica@example.com:
-    priorWorkload: 160
+    priorWorkload: 24
   frank@example.com:
     constraints:
       - !Unavailable

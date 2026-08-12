@@ -54,12 +54,27 @@ jobs:
       run: |
         Write-Host "Merging raw profile output files"
         &"$(rustc --print target-libdir)/../bin/llvm-profdata" merge -sparse default.profraw -o default.profdata
-        $latest_asset = Get-ChildItem -Path ./target/debug/deps -Filter "on_call-*" -File `
-        | Where-Object { $_.Name.EndsWith(".exe") -or (-not $_.Name.Contains(".")) } `
-        | Sort-Object -Top 1 -Property LastWriteTime
-        Write-Host "Latest Asset: $latest_asset"
+
+        # The crate builds a library, a binary and an integration test, each of
+        # which produces its own test executable. All of them have to be passed
+        # to llvm-cov or the report only reflects whichever one happens to be
+        # picked, badly under-reporting coverage.
+        $binaries = Get-ChildItem -Path ./target/debug/deps -File `
+        | Where-Object { $_.Name -match '^(on_call|examples)-[0-9a-f]+(\.exe)?$' } `
+        | Where-Object { $_.Name.EndsWith(".exe") -or (-not $_.Name.Contains(".")) }
+
+        if (-not $binaries) {
+          throw "No test binaries found to measure coverage against"
+        }
+
+        Write-Host "Measuring coverage across:"
+        $binaries | ForEach-Object { Write-Host "  $($_.Name)" }
+
+        $objects = @($binaries[0].FullName)
+        $binaries | Select-Object -Skip 1 | ForEach-Object { $objects += @("-object", $_.FullName) }
+
         Write-Host "Exporting LCOV coverage report"
-        &"$(rustc --print target-libdir)/../bin/llvm-cov" export -instr-profile default.profdata $latest_asset `
+        &"$(rustc --print target-libdir)/../bin/llvm-cov" export -instr-profile default.profdata @objects `
             -Xdemangler=rustfilt `
             -ignore-filename-regex='.cargo|rustc' `
             -compilation-dir=src `

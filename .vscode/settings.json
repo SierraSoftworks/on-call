@@ -4,5 +4,6 @@
         "!TimeOfDay mapping",
         "!Unavailable mapping",
         "!None",
+        "!EverySlots scalar",
     ]
 }

@@ -1,0 +1,32 @@
+# A strictly predictable rota: shifts always run Monday to Monday, and handoffs
+# can never land mid-week.
+#
+# Rotation locking is enforced structurally rather than as a preference — the
+# optimizer assigns whole rotations, so a mid-rotation handoff is not something
+# it can produce. The trade-off is that somebody is only eligible for a rotation
+# if they can cover all of it, so partial availability goes unused.
+#
+# Run with:
+#   on-call --config examples/locked.yaml --start 2023-01-01 --end 2023-06-30
+
+shiftLength: 5
+
+constraints:
+  - !DayOfWeek [Mon, Tue, Wed, Thu, Fri]
+  - !TimeOfDay
+    start: 09:00:00
+    end: 17:00:00
+
+rotation:
+  lock: true
+  boundary: !DayOfWeek [Mon]
+
+humans:
+  alice@example.com: {}
+  bob@example.com: {}
+  claire@example.com: {}
+  donovan@example.com:
+    constraints:
+      - !Unavailable
+        start: 2023-03-06
+        end: 2023-03-13

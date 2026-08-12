@@ -1,0 +1,63 @@
+# A rota that exercises the optimizer's hard rules and soft preferences.
+#
+# Run with:
+#   on-call --config examples/constrained.yaml --start 2023-01-01 --end 2023-06-30 --explain
+
+shiftLength: 2
+
+constraints:
+  - !DayOfWeek [Mon, Tue, Wed, Thu, Fri]
+  - !TimeOfDay
+    start: 09:00:00
+    end: 17:00:00
+
+# Hard rules. The optimizer will not knowingly break these; if it cannot avoid
+# doing so it reports the residual violation rather than silently ignoring it.
+rules:
+  minRestHours: 48        # at least two days off between shifts
+  maxConsecutiveHours: 24 # no more than three working days on the hook
+  desiredRestHours: 120   # aim for a week off, but do not insist
+
+# How much each objective matters, relative to the others. Every objective
+# reports its penalty in the same units, so these are directly comparable.
+weights:
+  fairness: 10
+  runLength: 10
+  rest: 5
+  preference: 3
+  stability: 5
+
+humans:
+  # Works Mondays, Wednesdays and Fridays only. Their fair share is scaled down
+  # to match, so they are not penalised for being part time.
+  alice@example.com:
+    constraints:
+      - !DayOfWeek [Mon, Wed, Fri]
+
+  # Explicitly half time, regardless of availability.
+  bob@example.com:
+    capacity: 0.5
+
+  # Would rather not cover Mondays, but can if needed.
+  claire@example.com:
+    preferences:
+      - avoid: !DayOfWeek [Mon]
+        weight: 3
+
+  # Happy to take Fridays off other people's hands.
+  donovan@example.com:
+    preferences:
+      - prefer: !DayOfWeek [Fri]
+        weight: 2
+
+  # Carrying 24 hours over from the last scheduling run, so will be scheduled
+  # a little less until the rest of the team catches up.
+  erica@example.com:
+    priorWorkload: 24
+
+  # On leave for a week in February.
+  frank@example.com:
+    constraints:
+      - !Unavailable
+        start: 2023-02-13
+        end: 2023-02-20

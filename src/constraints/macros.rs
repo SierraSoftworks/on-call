@@ -25,43 +25,21 @@ macro_rules! constraint_iterator {
             type Item = $crate::timerange::TimeRange;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if self.buffer.is_empty() {
+                // Keep pulling from the source until we produce something, or
+                // the source runs dry. A constraint that filters a range out
+                // entirely yields an empty segment, and stopping there would
+                // silently truncate the rest of the schedule.
+                while self.buffer.is_empty() {
                     match self.source.next() {
                         Some(range) => {
                             self.buffer.extend(self.segment(range));
                         },
-                        None => {},
+                        None => return None,
                     }
                 }
 
                 self.buffer.pop_front()
             }
         }
-    };
-}
-
-macro_rules! time {
-    ($hour:expr, $minute:expr) => {
-        time!($hour, $minute, 0)
-    };
-    ($hour:expr, $minute:expr, $second:expr) => {
-        chrono::NaiveTime::from_hms_opt($hour, $minute, $second).unwrap()
-    };
-}
-
-#[cfg(test)]
-macro_rules! date {
-    ($year:expr, $month:expr, $day:expr) => {
-        chrono::NaiveDate::from_ymd_opt($year, $month, $day).unwrap()
-    };
-}
-
-#[cfg(test)]
-macro_rules! date_time {
-    ($year:expr, $month:expr, $day:expr) => {
-        date_time!($year, $month, $day, 0, 0, 0)
-    };
-    ($year:expr, $month:expr, $day:expr, $hour:expr, $minute:expr, $second:expr) => {
-        chrono::NaiveDate::from_ymd_opt($year, $month, $day).and_then(|d| d.and_hms_opt($hour, $minute, $second)).unwrap()
     };
 }

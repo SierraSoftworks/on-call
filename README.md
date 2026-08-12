@@ -1,9 +1,14 @@
 # On-Call Solver
-**Automatically compute a reasonable on-call schedule for your team using a declarative constraint-based approach.**
+**Automatically compute a fair on-call schedule for your team using a declarative, constraint-based approach.**
 
-This tool is designed to help teams with a reasonably complex on-call schedule quickly and consistently
-generate a reasonable, fair, schedule without the manual legwork of needing to manually handle exceptions
-for holidays, sick-days etc.
+This tool helps teams with a reasonably complex on-call schedule generate a fair rota without
+the manual legwork of juggling holidays, part-time contracts, sick days and personal preferences
+by hand.
+
+It works by *optimizing*: it builds a candidate schedule, then spends a fixed budget of effort
+repeatedly improving it, keeping the best schedule it finds. That lets it make trade-offs a
+one-pass algorithm cannot — accepting a slightly awkward shift this week because it makes the
+next three weeks considerably fairer.
 
 ## Installation
 Install with [Homebrew](https://brew.sh):
@@ -13,153 +18,264 @@ brew install sierrasoftworks/tap/on-call
 ```
 
 ## Features
- - **Supports Variable On-Call Schedules** which can have arbitrary cycle lengths and constraints like which days of
-   the week they cover, and which hours of the day they run for.
- - **Allows for complex availability constraints** which can be applied to individual engineers, including
-   periods of unavailability, days of the week they are unable to cover, etc.
- - **Fairness** is computed as the amount of time that a given engineer is on-call, and the tool will attempt
-   to generate a schedule that is as fair as possible at any given point in time (see the [Factors](#factors) section for more info).
- - **Manages Workload and Recovery** by ensuring that engineers don't, wherever possible, perform back-to-back shifts and that they
-   get time between shifts to recover (while ensuring fairness in the face of holidays etc).
- - **Stable Output** ensures that you can run the tool multiple times and receive the same output each time, allowing it to be
-   used incrementally without impacting the schedule unless changes need to be made for new constraints.
+ - **Fairness that accounts for availability.** Everyone gets a target share of the on-call load,
+   scaled to how much of the schedule they can actually cover. A part-time engineer is not
+   expected to carry the same hours as a full-timer, and is not penalised for it either.
+ - **Hard rules and soft preferences, kept separate.** Minimum rest and maximum shift length are
+   enforced as rules. "I'd rather not have Mondays" is a preference the optimizer honours when it
+   can afford to, and reports on when it cannot.
+ - **Complex availability constraints** per engineer: planned leave, days of the week they cannot
+   cover, restricted hours.
+ - **Stable output.** The same inputs always produce the same schedule. Pass `--baseline` to also
+   keep re-runs close to an already-published rota instead of reshuffling it.
+ - **Honest reporting.** `--explain` shows exactly which objectives are costing what, and the
+   summary reports each person's workload against their target rather than a bare average.
 
 ## Usage
 
 ```bash
-$ on-call --config .\examples\3-day.yaml --start 2023-01-01 --end 2023-12-30 --debug --format json
+$ on-call --config examples/3-day.yaml --start 2023-01-01 --end 2023-12-31
 ```
 
-### Output Formats
-You can specify the output format using the `--format` flag. The following formats are supported:
+| Flag | Purpose |
+|---|---|
+| `--config <FILE>` | The YAML rota definition. |
+| `--start`, `--end` | Horizon to schedule. Defaults to today through 28 days' time. `--end` is exclusive. |
+| `--format` | `human` (default), `json`, `csv`, or `none` for statistics only. |
+| `--baseline <FILE>` | A previously generated JSON schedule to stay close to. |
+| `--freeze-before <DATE>` | Pin shifts ending before this date to their baseline owner. Requires `--baseline`. |
+| `--steps <N>` | How many candidate changes to evaluate. Default 200,000. |
+| `--seed <N>` | Optimizer seed. The same seed always gives the same schedule. |
+| `--time-budget <SECONDS>` | Stop early after a wall-clock limit. Makes output machine-dependent, so off by default. |
+| `--explain` | Print the score broken down by objective, plus optimizer statistics. |
 
- - `human` - Outputs the schedule as a human-readable list of shifts
- - `json` - Outputs the schedule as a JSON object
- - `csv` - Outputs the schedule as a CSV file
- - `none` - Outputs only the statistics about the schedule (useful for verifying fairness)
+The schedule goes to stdout; everything else goes to stderr, so `--format json > schedule.json`
+gives you a clean file.
 
-## How It Works
-The tool works by generating a sequence of time slots that a given on-call rotation needs to fill and incrementally comparing this
-against the availability and cost of placing each engineer on-call for that shift slot. We take into consideration a range of
-[Factors](#factors) to determine this cost function, including the amount of time an engineer has been on-call relative to the rest
-of the team, how recently they were on-call, and whether they will be able to cover the full shift length. These allow us to then
-select the engineer best positioned to cover the shift, and then repeat the process for the next shift slot.
+### Re-running without churning the roster
 
-**NOTE** Because this is a forward-only algorithm, it does not guarantee optimality and will not (for example) schedule a suboptimal
-engineer for a shift to ensure better optimality for a future shift.
-
-### Factors
-
-#### Shift Length
-This factor is used to try and ensure that engineers do not cover back-to-back shifts, as this is a common source of burnout and
-anxiety. If an engineer was the most recent on-call for a schedule, they will be assigned a substantially higher cost, ensuring that
-they are only placed on-call if there is no alternative.
-
-#### Workload Fairness
-This factor is computed as the amount of time that a given engineer has been on-call relative to the person on the team who has
-the lowest amount of on-call time. By attaching a higher cost to placing a given engineer on-call when they have already been on-call
-for a longer period of time, we ensure that the workload is more evenly distributed across the team.
-
-This particular factor helps greatly when engineers take time off, as it ensures that the engineer will make up the time when they
-return to work (assuming they are available to cover the shift, and without violating the other constraints).
-
-#### Shift Coverage
-We attempt to ensure that engineers are assigned to shifts that they are able to cover in their entirety wherever possible.
-This constraint can, however, be violated if there is no better option available, for example if one of your engineers is unable
-to cover on-call on Fridays (in which case they will be assigned on-call for the rest of the week and another engineer will be
-assigned to cover that Friday).
-
-#### Recency
-Giving engineers time to recover between shifts is not only important to help manage burnout, it is also important to ensure that
-they have time to focus on engineering work. We attempt to maximize the time between shifts for each engineer, assigning engineer
-who have been off-call the longest before those who have been off-call for a shorter period of time (all other things being equal).
-
-## Example
-The tool requires that you specify your on-call rotation in a YAML file like the following. This file specifies the length of
-your on-call rotation (which is the number of days that each engineer is on-call for), and a set of constraints that the schedule
-must adhere to.
-
-At the schedule level, your constraints determine the time slots that require on-call coverage, and will commonly restrict the
-hours of the day that are to be covered, or the days of the week that require coverage - however you can also specify periods that
-do not require on-call coverage if you wish.
-
-At the human level, you can specify a set of constraints that apply to each engineer. These are most commonly used to declare the
-time that the engineers are unavailable (due to planned leave), but can also be used to restrict the days of the week that they
-will cover on-call (if you have part time employees, or people whose situations require them to be less available on certain days).
-
-```yaml
-shiftLength: 1 # A new shift starts every day
-constraints:
-  - !DayOfWeek [Mon, Tue, Wed, Thu, Fri] # Shifts cover weekdays only
-  - !TimeOfDay # And run from 08:00 to 16:00 on those days
-    start: 08:00:00
-    end: 16:00:00
-humans:
-  alice@example.com:
-    constraints:
-      - !DayOfWeek [Mon, Wed, Fri] # Alice is only available on Mondays, Wednesdays and Fridays
-  bob@example.com:
-    constraints:
-      - !Unavailable # Bob is taking vacation between these dates
-        start: 2023-01-01
-        end: 2023-01-07
-  claire@example.com: # Claire has no availability restrictions, but had previously covered extra shifts totalling 36 hours
-    priorWorkload: 36
-```
+Once you have published a schedule, feed it back in so the optimizer only changes what it must:
 
 ```bash
-# Run the on-call tool to generate a schedule from the start of December until March
-$ on-call --config .\examples\3-day.yaml --start 2023-01-01 --end 2023-12-30
+# Generate and publish
+$ on-call --config rota.yaml --start 2024-01-01 --end 2024-06-30 --format json > published.json
+
+# Later: someone books leave. Re-plan, keeping the next two weeks fixed and
+# minimising disruption to the rest.
+$ on-call --config rota.yaml --start 2024-01-01 --end 2024-06-30 \
+    --baseline published.json --freeze-before 2024-02-01 --format json > updated.json
+```
+
+Frozen shifts cannot move at all. Beyond the freeze date the optimizer starts from the published
+schedule rather than from scratch, so it begins at zero disruption and only moves a shift when the
+improvement clearly outweighs the churn. Re-running with nothing changed is a no-op, whatever seed
+you use.
+
+## How It Works
+
+### 1. Building the problem
+The schedule-level constraints are applied to your date range to work out which periods need
+coverage. Those periods are then split at every point where *anybody's* availability changes, so
+each resulting slot is either wholly coverable or wholly uncoverable by each person. This is what
+lets the tool use somebody who is only free for half a day, instead of having to round their
+availability up or down.
+
+Each person is then given a target number of on-call hours. Targets always add up to exactly the
+total time needing coverage, so a perfectly fair schedule is achievable and scores zero.
+
+### 2. Scoring
+Schedules are scored on two tiers, compared in order:
+
+ - **Hard** — uncovered time, breaches of `minRestHours`, breaches of `maxConsecutiveHours`. Any
+   schedule with fewer hard violations beats any schedule with more, whatever its soft score.
+ - **Soft** — fairness, shift length, rest, preferences, and stability against a baseline.
+
+Every soft objective reports its penalty in the same units, so the `weights` are directly
+comparable to one another. Lower is better; a schedule that satisfies a lot of `prefer:`
+preferences can score below zero.
+
+Deviations are penalised quadratically rather than linearly. That makes one large unfairness
+worse than several small ones, which is how teams actually experience it, and it gives the
+optimizer a gradient to follow everywhere instead of a plateau to get stuck on.
+
+### 3. Optimizing
+An initial schedule is built greedily, then improved by late-acceptance hill climbing: a change is
+kept if it beats either the current schedule or the one from a few hundred steps ago. That is
+enough to climb out of local optima while still trending toward better schedules. When progress
+stalls, a section of the schedule is torn out entirely and rebuilt, which reaches solutions that
+no sequence of small changes could.
+
+The optimizer only ever proposes people who are genuinely available, so availability is a property
+of the search space rather than something the score has to police — it cannot be violated.
+
+### Objectives
+
+| Objective | What it does |
+|---|---|
+| `coverage` | *(hard)* Every slot should have somebody on it. |
+| `fairness` | Everyone's hours should land on their target share. |
+| `runLength` | Shifts should be about `shiftLength` long — neither fragmented nor punishing. Capped per person at the longest shift their availability permits, so part-timers are not priced out. |
+| `rest` | People should get `desiredRestHours` between shifts. There is no reward for exceeding it, which stops one person being front-loaded and then never scheduled again. |
+| `preference` | Honour `avoid:` and `prefer:` where affordable. |
+| `stability` | Stay close to `--baseline`. |
+
+## Configuration
+
+Only `shiftLength` and `humans` are required; everything else has sensible defaults.
+
+```yaml
+# The nominal length of one shift, in days. A target, not a rule — the optimizer
+# will accept a shorter or longer shift if it makes the schedule materially better.
+shiftLength: 3
+
+# Which periods need on-call coverage.
+constraints:
+  - !DayOfWeek [Mon, Tue, Wed, Thu, Fri]
+  - !TimeOfDay
+    start: 08:00:00
+    end: 16:00:00
+
+# Rules the optimizer treats as constraints rather than costs. All optional.
+rules:
+  minRestHours: 48         # minimum recovery time between two shifts
+  maxConsecutiveHours: 72  # maximum on-call time within one unbroken shift
+  desiredRestHours: 120    # rest to aim for; falling short costs, exceeding earns nothing
+
+# Relative importance of each soft objective. Zero disables one entirely.
+weights:
+  fairness: 10
+  runLength: 10
+  rest: 3
+  preference: 1
+  stability: 5
+
+# How each person's fair share is derived.
+#   capacity (default) - proportional to how much of the rota they can cover
+#   equal              - everyone carries the same hours regardless of availability
+fairness: capacity
+
+# Optional. Restricts handoffs to rotation boundaries, enforced structurally.
+rotation:
+  lock: true
+  boundary: !DayOfWeek [Mon]   # or: !EverySlots 5
+
+humans:
+  alice@example.com:
+    # Hard availability: Alice will never be scheduled outside these.
+    constraints:
+      - !DayOfWeek [Mon, Wed, Fri]
+
+  bob@example.com:
+    # Explicitly half time, regardless of what their availability implies.
+    capacity: 0.5
+    constraints:
+      - !Unavailable
+        start: 2023-01-01
+        end: 2023-01-07   # exclusive
+
+  claire@example.com:
+    # Soft preferences: honoured where affordable, overridden where not.
+    preferences:
+      - avoid: !DayOfWeek [Mon]
+        weight: 3
+      - prefer: !TimeOfDay
+          start: 08:00:00
+          end: 12:00:00
+
+  erica@example.com:
+    # How far ahead of their fair share they already are. Reduces their target
+    # until the team catches up. May be negative for somebody who is owed time.
+    # The summary's `carry forward` column tells you what to put here next time.
+    priorWorkload: 24
+```
+
+### Constraints
+
+| Tag | Meaning |
+|---|---|
+| `!DayOfWeek [Mon, Wed]` | Only these days of the week. |
+| `!TimeOfDay {start, end}` | Only these hours. `start` later than `end` wraps overnight. |
+| `!Unavailable {start, end}` | Not during this date range. `end` is exclusive. |
+| `!None` | No restriction. |
+
+At the schedule level these determine which periods need coverage. At the person level they
+determine when that person can be scheduled. The same tags work in `preferences`, where they
+select the times a preference applies to.
+
+## Example output
+
+```
+$ on-call --config examples/constrained.yaml --start 2023-01-01 --end 2023-06-30 --explain
 ```
 
 ```
 Humans:
-  claire@example.com:
-    - always available
-  frank@example.com:
-    - unavailable from 2023-02-09 to 2023-02-17
-  bob@example.com:
-    - unavailable from 2023-01-01 to 2023-01-07
-  alice@example.com:
-    - available on Mon, Wed, Fri,
-  donovan@example.com:
-  erica@example.com:
+  alice@example.com: available on Mon, Wed, Fri
+  bob@example.com: capacity: 0.5x
+  claire@example.com: prefers not to be available on Mon (weight 3)
+  donovan@example.com: prefers to be available on Fri (weight 2)
+  erica@example.com: prior workload: 24 hours
+  frank@example.com: unavailable from 2023-02-13 to 2023-02-20
 
-Workload: (min: 336, avg: 346, max: 352)
-  claire@example.com: 352 hours
-  bob@example.com: 352 hours
-  donovan@example.com: 352 hours
-  frank@example.com: 344 hours
-  erica@example.com: 344 hours
-  alice@example.com: 336 hours
+Schedule: 129 slots covering 1032h, in shifts of about 16h
+  rules: at least 48h rest between shifts, shifts no longer than 24h
 
-Longest shift: (min: 16, avg: 22, max: 24)
-  frank@example.com: 24 hours
-  erica@example.com: 24 hours
-  bob@example.com: 24 hours
-  claire@example.com: 24 hours
-  donovan@example.com: 24 hours
-  alice@example.com: 16 hours
+Score: 0hard/-2830soft
 
-Shift length histogram:
- 64 | 24 hours
- 46 | 8 hours
- 10 | 16 hours
+Workload: (min: 104h, avg: 172h, max: 208h)
+                                 actual   target    delta  carry forward
+  alice@example.com                128h     124h      +3h  3h
+  donovan@example.com              208h     208h       0h  0h
+  claire@example.com               208h     208h       0h  0h
+  erica@example.com                184h     184h       0h  0h
+  frank@example.com                200h     200h       0h  0h
+  bob@example.com                  104h     104h       0h  0h
 
+Longest shift: (min: 16h, avg: 17h, max: 24h)
+  alice@example.com              16h across 9 shifts, shortest rest 160h
+  ...
 
-Schedule:
-  2023-01-02 08:00:00 - 2023-01-02 16:00:00: claire@example.com
-  2023-01-03 08:00:00 - 2023-01-03 16:00:00: claire@example.com
-  2023-01-04 08:00:00 - 2023-01-04 16:00:00: claire@example.com
-  2023-01-05 08:00:00 - 2023-01-05 16:00:00: donovan@example.com
-  2023-01-06 08:00:00 - 2023-01-06 16:00:00: donovan@example.com
-  2023-01-09 08:00:00 - 2023-01-09 16:00:00: donovan@example.com
-  2023-01-10 08:00:00 - 2023-01-10 16:00:00: bob@example.com
-  2023-01-11 08:00:00 - 2023-01-11 16:00:00: bob@example.com
-  2023-01-12 08:00:00 - 2023-01-12 16:00:00: bob@example.com
-  2023-01-13 08:00:00 - 2023-01-13 16:00:00: erica@example.com
-  2023-01-16 08:00:00 - 2023-01-16 16:00:00: erica@example.com
-  2023-01-17 08:00:00 - 2023-01-17 16:00:00: erica@example.com
-  2023-01-18 08:00:00 - 2023-01-18 16:00:00: frank@example.com
-  2023-01-19 08:00:00 - 2023-01-19 16:00:00: frank@example.com
+Objectives:
+  runLength    0hard/33600soft
+  fairness     0hard/1010soft
+  coverage     -
+  rest         -
+  stability    -
+  preference   0hard/-37440soft
+```
+
+Read the workload table as: everyone landed on their target, except Alice who is three hours over
+and should carry `priorWorkload: 3` into the next run. The `preference` objective is negative
+because preferences were satisfied, not violated.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | A schedule was produced with every rule satisfied. |
+| `1` | A schedule was produced, but it has coverage gaps or breaks a rule in `rules:`. Run with `--explain` to see which. |
+| `2` | The configuration could not be read or is invalid. |
+
+## Examples
+
+| File | Demonstrates |
+|---|---|
+| `examples/rotation.yaml` | Daily handoffs. |
+| `examples/3-day.yaml` | Three-day shifts, leave, carried-over workload. |
+| `examples/weekly.yaml` | Week-long shifts. |
+| `examples/constrained.yaml` | Hard rules, soft preferences, explicit capacity. |
+| `examples/locked.yaml` | Rotations locked to Monday boundaries. |
+
+## Using it as a library
+
+The scheduler is also published as a library, so you can drive it directly:
+
+```rust
+use on_call::model::Problem;
+use on_call::search::{self, Options};
+use on_call::schedule::Schedule;
+
+let problem = Problem::build(&config, start, end)?;
+let (assignment, stats) = search::solve(&problem, &Options::default());
+let schedule = Schedule::from_assignment(&problem, &assignment);
 ```
