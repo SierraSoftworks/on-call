@@ -101,4 +101,36 @@ mod tests {
             "The iterator should generate the correct sequence of ranges"
         );
     }
+
+    #[test]
+    fn filtered_ranges_do_not_truncate_the_iterator() {
+        // Regression: `segment` returning an empty vec used to end the
+        // iterator, so the first non-matching range silently discarded every
+        // range after it. Here Tuesday and Thursday are filtered out, and
+        // Wednesday and Friday must still come through.
+        let days: Vec<TimeRange> = (2..=6)
+            .map(|day| {
+                TimeRange::new(
+                    date_time!(2023, 1, day, 9, 0, 0),
+                    date_time!(2023, 1, day, 17, 0, 0),
+                )
+            })
+            .collect();
+
+        let output: Vec<TimeRange> = DayOfWeekIterator::new(
+            days.into_iter(),
+            vec![Weekday::Mon, Weekday::Wed, Weekday::Fri],
+        )
+        .collect();
+
+        assert_eq!(
+            output,
+            vec![
+                TimeRange::new(date_time!(2023, 1, 2, 9, 0, 0), date_time!(2023, 1, 2, 17, 0, 0)),
+                TimeRange::new(date_time!(2023, 1, 4, 9, 0, 0), date_time!(2023, 1, 4, 17, 0, 0)),
+                TimeRange::new(date_time!(2023, 1, 6, 9, 0, 0), date_time!(2023, 1, 6, 17, 0, 0)),
+            ],
+            "every matching day must survive the non-matching ones being dropped"
+        );
+    }
 }
